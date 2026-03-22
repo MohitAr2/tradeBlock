@@ -17,9 +17,12 @@ const GRID_COLOR  = '#1e2320';
 const TEXT_COLOR  = '#5a6360';
 const CROSS_COLOR = '#3a4240';
 
+// Lightweight Charts v3 constants (avoids namespace import issues)
+const CROSSHAIR_NORMAL = 1;
+const LINE_STYLE_DASHED = 2;
+
 export default function CandlestickChart({ candles, momentum }: CandlestickChartProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const chartRef = useRef<any>(null);
 
   useEffect(() => {
@@ -33,7 +36,7 @@ export default function CandlestickChart({ candles, momentum }: CandlestickChart
     let cleanupTooltip: (() => void) | null = null;
     let ro: ResizeObserver | null = null;
 
-    import('lightweight-charts').then((lc) => {
+    import('lightweight-charts').then((lc: any) => {
       if (!containerRef.current) return;
 
       const chart = lc.createChart(containerRef.current, {
@@ -50,9 +53,9 @@ export default function CandlestickChart({ candles, momentum }: CandlestickChart
           horzLines: { color: GRID_COLOR, style: 1 },
         },
         crosshair: {
-          mode: lc.CrosshairMode.Normal,
-          vertLine: { color: CROSS_COLOR, width: 1, style: 2 },
-          horzLine: { color: CROSS_COLOR, width: 1, style: 2 },
+          mode: CROSSHAIR_NORMAL,
+          vertLine: { color: CROSS_COLOR, width: 1, style: LINE_STYLE_DASHED },
+          horzLine: { color: CROSS_COLOR, width: 1, style: LINE_STYLE_DASHED },
         },
         rightPriceScale: { borderColor: '#1e2320' },
         timeScale: {
@@ -77,7 +80,7 @@ export default function CandlestickChart({ candles, momentum }: CandlestickChart
 
       candleSeries.setData(
         candles.map((c) => ({
-          time:  c.time as lc.Time,
+          time:  c.time,
           open:  c.open,
           high:  c.high,
           low:   c.low,
@@ -88,7 +91,7 @@ export default function CandlestickChart({ candles, momentum }: CandlestickChart
       const lineSeries = chart.addLineSeries({
         color:            'rgba(96, 165, 250, 0.55)',
         lineWidth:        1,
-        lineStyle:        lc.LineStyle.Dashed,
+        lineStyle:        LINE_STYLE_DASHED,
         lastValueVisible: false,
         priceLineVisible: false,
         scaleMargins:     { top: 0.1, bottom: 0.1 },
@@ -100,13 +103,14 @@ export default function CandlestickChart({ candles, momentum }: CandlestickChart
 
       lineSeries.setData(
         momentum.map((m) => ({
-          time:  m.date as lc.Time,
+          time:  m.date,
           value: priceMin + (m.value / 100) * priceRange,
         }))
       );
 
       chart.timeScale().fitContent();
 
+      // Tooltip
       const toolTip = document.createElement('div');
       toolTip.style.cssText = `
         position:absolute; display:none; padding:8px 10px;
@@ -116,7 +120,7 @@ export default function CandlestickChart({ candles, momentum }: CandlestickChart
       `;
       containerRef.current.appendChild(toolTip);
 
-      chart.subscribeCrosshairMove((param) => {
+      chart.subscribeCrosshairMove((param: any) => {
         if (!param.point || !param.time) { toolTip.style.display = 'none'; return; }
         const idx = candles.findIndex((c) => c.time === param.time);
         if (idx === -1) { toolTip.style.display = 'none'; return; }
